@@ -2,7 +2,8 @@ module Parse where
 --import Control.Monad.Fail
 import Control.Applicative hiding ((<|>))
 import Control.Monad (liftM, ap)
-import Debug.Trace
+import Debug.Trace ( traceM )
+import Data.Char ( isSpace )
 
 data Derivs = Derivs {
                -- Expressions
@@ -14,7 +15,8 @@ data Derivs = Derivs {
                -- Lexical tokens
                --dvDigits :: Result (Int, Int),
                --dvDigit :: Result Int,
-               --dvSymbol :: Result Char,
+               dvSymbol :: Result Char,
+               dvSpacing :: Result (),
                --dvWhitespace :: Result (),
 
                -- Raw input
@@ -61,11 +63,14 @@ instance MonadFail Parser where
    --d = Derivs add mult prim dec digits digit sym whsp chr
 parse :: String -> Derivs
 parse s = d where
-   d = Derivs add mult prim dec chr
+   d = Derivs add mult prim dec sym spc chr
    add = pAdditive d
    mult = pMultitive d
    prim = pPrimary d
    dec = pDecimal d
+   sym = pSymbol d
+   spc = pSpacing d
+   --wht = pWhitespace d
    {-
    digits = pDigits d
    digit = pDigit d
@@ -79,10 +84,6 @@ parse s = d where
 
 
 ---------- Character-oriented parsers
--- look up alternative implementation?
-isSpace :: Char -> Bool
-isSpace c = c `elem` " \n\t\r"
-
 
 
 {-
@@ -104,7 +105,7 @@ symbol c =
    -- <?> show c
 -}
 
-symbol c =
+symbolz c =
    do c' <- Parser dvChar
       traceM $ "symbol: " ++ [c] ++ ", stream: " ++ [c']
       if c' == c then 
@@ -112,9 +113,10 @@ symbol c =
             return c'
       else fail []
    
---   do c' <- Parser dvSymbol
---     if c' == c then return c
---       else fail []
+symbol c =
+   do c' <- Parser dvSymbol
+      if c' == c then return c
+         else fail []
 
 Parser pAdditive =
    do traceM "Starting additive"
@@ -127,7 +129,8 @@ Parser pAdditive =
    <|> (do Parser dvMultitive)
 
 Parser pMultitive =
-   do vleft <- Parser dvPrimary
+   do traceM "Starting multitive"
+      vleft <- Parser dvPrimary
       symbol '*'
       vright <- Parser dvMultitive
       return (vleft * vright)
@@ -179,22 +182,40 @@ Parser pDecimal =
 Parser pDigits = undefined
 Parser pDigit = undefined
 
--- From Ford paper
--- Parse an operator followed by optional whitespace
-{-
-pSymbol :: Derivs -> Result Char
-pSymbol d =
-   case dvChar d of
-      Parsed c d' ->
-         if c `elem` "+-*/%()"
-         then case dvWhitespace d' of
-            Parsed _ d'' -> Parsed c d''
-            _ -> NoParse
-         else NoParse
-      _ -> NoParse
+-- Parsing functions for lexical analysis
+anyChar :: Parser Char
+anyChar = Parser dvChar
+
+oneOf :: Foldable t => t Char -> Parser Char
+oneOf chs = satisfy anyChar (`elem` chs)
+
+satisfy :: Parser v -> (v -> Bool) -> Parser v
+satisfy (Parser p) predicate = Parser parse
+      where parse dvs = check dvs (p dvs)
+            check dvs result@(Parsed val rem) =
+               if predicate val then result
+               else NoParse
+            check dvs none = none
 
 -- From Ford paper
--- Parsing functions for lexical analysis
+-- Parse an operator followed by optional whitespace
+pSymbol :: Derivs -> Result Char
+Parser pSymbol =
+   do c <- oneOf "+-*/%()0123456789"
+      Parser dvSpacing
+      return c
+
+space = satisfy anyChar isSpace
+
+-- Parse zero or more whitespace characters
+Parser pSpacing =
+   do space
+      Parser dvSpacing
+      return ()
+   <|>
+   do return ()
+
+-- From Ford paper
 pWhitespace :: Derivs -> Result ()
 pWhitespace d =
    case dvChar d of
@@ -203,6 +224,4 @@ pWhitespace d =
          then pWhitespace d'
          else Parsed () d
       _ -> Parsed () d
-
--}
-Parser pChar = undefined
+ 
