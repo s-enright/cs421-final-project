@@ -1,0 +1,40 @@
+General features
+=====================
+x Handle numbers with multiple digits
+x Handle initial whitespace
+x Better solution for digits
+* Handle no parse with error message?
+* Flush stdin?
+* Negative numbers
+
+Languages
+======================
+* Extend language to include non-arithmetic grammar
+* Write non-packrat parser
+
+Performance
+=====================
+* Find way to measure time
+* Find way to measure memory consumption
+* Determine case for which packrat excels
+
+Testing
+=====================
+* Investigate stack test
+
+Write-up
+=====================
+* Concept
+* Paper examples updated for modern GHC Haskell
+* Packrat grammar
+* LL grammar
+* Example
+* Test
+* Performance results
+* Commit to public repo
+
+Refactoring
+=====================
+* Re-write hard to understand parts from paper
+* Add documentation via comments
+* Rebase
