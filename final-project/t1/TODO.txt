@@ -1,11 +1,11 @@
 General features
 =====================
+* Error messages: return Result Derivs
+* Floating pt numbers
 x Handle numbers with multiple digits
 x Handle initial whitespace
 x Better solution for digits
-* Handle no parse with error message?
-* Flush stdin?
-* Negative numbers
+x Negative numbers
 
 Languages
 ======================
@@ -35,6 +35,8 @@ Write-up
 
 Refactoring
 =====================
+* Prettify
+* Remove traces
 * Re-write hard to understand parts from paper
 * Add documentation via comments
 * Rebase

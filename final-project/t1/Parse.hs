@@ -81,36 +81,55 @@ Parser pAdditive =
    do traceM "Starting additive"
       Parser dvWhitespace
       vleft <- Parser dvMultitive
-      traceM "Before plus"
       symbol '+'
-      traceM "After plus"
       vright <- Parser dvAdditive
       return $ vleft + vright
-   <|> do Parser dvMultitive
+   <|> 
+   do Parser dvWhitespace
+      vleft <- Parser dvMultitive
+      symbol '-'
+      vright <- Parser dvAdditive
+      return $ vleft - vright
+   <|>
+   do Parser dvMultitive
 
 pMultitive :: Derivs -> Result Int
 Parser pMultitive =
-   do traceM "Starting multitive"
-      vleft <- Parser dvPrimary
+   do vleft <- Parser dvPrimary
       symbol '*'
       vright <- Parser dvMultitive
       return $ vleft * vright
-   <|> do Parser dvPrimary
+   <|>
+   do vleft <- Parser dvPrimary
+      symbol '/'
+      vright <- Parser dvMultitive
+      case vright of
+         0 -> fail "Divide by zero error."
+         _ -> return $ vleft `div` vright
+   <|>
+   do vleft <- Parser dvPrimary
+      symbol '%'
+      vright <- Parser dvMultitive
+      return $ vleft `mod` vright
+   <|>
+   do Parser dvPrimary
 
 pPrimary :: Derivs -> Result Int
 Parser pPrimary =
-   do traceM "starting pPrimary"
-      symbol '('
-      traceM "after lparen"
+   do symbol '('
       vleft <- Parser dvAdditive
-      traceM "after additive"
       symbol ')'
-      traceM "after rparen"
       return vleft
-   <|> do Parser dvInteger
+   <|>
+   do Parser dvInteger
 
 pInteger :: Derivs -> Result Int
 Parser pInteger =
+   do symbol '-'
+      (v,n) <- Parser dvMultipleDigits
+      Parser dvWhitespace
+      return (-v)
+   <|>
    do (v,n) <- Parser dvMultipleDigits
       Parser dvWhitespace
       return v
@@ -137,7 +156,7 @@ Parser pSingleDigit =
 -- Parse an operator followed by optional whitespace
 pSymbol :: Derivs -> Result Char
 Parser pSymbol =
-   do c <- oneOf "+-*/%()0123456789"
+   do c <- oneOf "+-*/%()"
       Parser dvWhitespace
       return c
 
@@ -147,7 +166,8 @@ Parser pWhitespace =
    do space
       Parser dvWhitespace
       return ()
-   <|> do return ()
+   <|>
+   do return ()
 
 -- ^^^ End non-terminal parsing functions
 
@@ -171,7 +191,7 @@ symbol :: Char -> Parser Char
 symbol c =
    do c' <- Parser dvSymbol
       if c' == c then return c
-         else fail []
+                 else fail []
 
 space :: Parser Char
 space = sat anyChar isSpace
