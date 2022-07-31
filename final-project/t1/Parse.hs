@@ -4,19 +4,22 @@ import Control.Applicative hiding ((<|>))
 import Control.Monad (liftM, ap)
 import Debug.Trace ( traceM )
 import Data.Char ( isSpace, isDigit, digitToInt )
+import Data.List (nub)
 
 data Derivs = Derivs {
                -- Expressions
-               dvAdditive :: Result Int,
-               dvMultitive :: Result Int,
-               dvPrimary :: Result Int,
-               dvInteger :: Result Int,
+               dvAdditive       :: Result Int,
+               dvMultitive      :: Result Int,
+               dvPrimary        :: Result Int,
+               dvInteger        :: Result Int,
                dvMultipleDigits :: Result (Int, Int),
-               dvSingleDigit :: Result Int,
+               dvSingleDigit    :: Result Int,
 
                -- Lexical tokens
-               dvSymbol :: Result Char,
-               dvWhitespace :: Result (),
+               dvKeyword        :: Result String,
+               dvMultipleChars  :: Result [Char],
+               dvSymbol         :: Result Char,
+               dvWhitespace     :: Result (),
 
                -- Raw input
                dvChar :: Result Char
@@ -60,13 +63,15 @@ instance MonadFail Parser where
 -- Create a result matrix for an input string
 parse :: String -> Derivs
 parse s = d where
-   d      = Derivs add mult prim int muldig sindig sym spc chr
+   d      = Derivs add mult prim int muldig sindig kwd mulchr sym spc chr
    add    = pAdditive d
    mult   = pMultitive d
    prim   = pPrimary d
    int    = pInteger d
    muldig = pMultipleDigits d
    sindig = pSingleDigit d
+   kwd    = pKeyword d
+   mulchr = pMultipleChars d
    sym    = pSymbol d
    spc    = pWhitespace d
    chr    = case s of
@@ -154,6 +159,33 @@ Parser pSingleDigit =
 
 -- From Ford paper
 -- Parse an operator followed by optional whitespace
+keywords :: [String]
+keywords = ["true", "false", "skip", "if", "then", "else", "while", "do"]
+
+-- Generates a list of allowed characters in a keyword
+uniqueChars :: [Char]
+uniqueChars = aux keywords []
+  where aux []     acc = acc
+        aux (l:ls) acc = aux ls (nub (l ++ acc))
+
+pKeyword :: Derivs -> Result String
+Parser pKeyword =
+   do traceM "Starting Keyword"
+      s <- Parser dvMultipleChars
+      traceM $ "s: " ++ s ++ ". end"
+      if s `elem` keywords then return s
+      else fail []
+
+pMultipleChars :: Derivs -> Result [Char]
+Parser pMultipleChars =
+   do c <- oneOf uniqueChars
+      traceM $ "char: " ++ [c]
+      s <- Parser dvMultipleChars
+      traceM (c:s)
+      return (c:s)
+   <|>
+   do return []
+
 pSymbol :: Derivs -> Result Char
 Parser pSymbol =
    do c <- oneOf "+-*/%()"
