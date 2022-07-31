@@ -6,13 +6,17 @@ import Parse
 
 -- Evaluate an expression and return the unpackaged result,
 -- ignoring any unparsed remainder.
-eval s = case pAdditive (parse s) of
-              Parsed v rem -> v
-              _ -> error "Parse error"
+evalA s = case pAdditive (parse s) of
+               Parsed v rem -> v
+               _ -> error "Parse error"
 
 evalK s = case pKeyword (parse s) of
             Parsed v rem -> v
             _ -> error "Parse error"
+            
+eval p s = case p (parse s) of
+              Parsed v rem -> v
+              _ -> error "Parse error"
 
 --- The REPL
 --- --------

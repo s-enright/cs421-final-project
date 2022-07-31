@@ -7,7 +7,10 @@ import Data.Char ( isSpace, isDigit, digitToInt )
 import Data.List (nub)
 
 data Derivs = Derivs {
-               -- Expressions
+               -- Boolean
+               dvBoolVal        :: Result Bool,
+               dvRelExpr        :: Result Bool,
+               -- Arithmetic
                dvAdditive       :: Result Int,
                dvMultitive      :: Result Int,
                dvPrimary        :: Result Int,
@@ -63,11 +66,16 @@ instance MonadFail Parser where
 -- Create a result matrix for an input string
 parse :: String -> Derivs
 parse s = d where
-   d      = Derivs add mult prim int muldig sindig kwd mulchr sym spc chr
+   d      = Derivs boolv relex add mult prim int muldig sindig kwd mulchr sym spc chr
+   -- Boolean
+   boolv  = pBoolVal d
+   relex  = pRelExpr d
+   -- Arithmetic
    add    = pAdditive d
    mult   = pMultitive d
    prim   = pPrimary d
    int    = pInteger d
+   -- Lexical
    muldig = pMultipleDigits d
    sindig = pSingleDigit d
    kwd    = pKeyword d
@@ -81,6 +89,30 @@ parse s = d where
 
 -- vvv Begin parsing functions for non-terminals
 
+-- Boolean
+pBoolVal :: Derivs -> Result Bool
+Parser pBoolVal =
+   do v <- Parser dvKeyword
+      case v of
+         "true"  -> return True
+         "false" -> return False
+         _       -> fail []
+   <|>
+   do Parser dvRelExpr
+
+Parser pRelExpr =
+   do traceM "Starting pRelexpr"
+      vl <- Parser dvAdditive
+      symbol '>'
+      vr <- Parser dvAdditive
+      return (vl > vr)
+   <|>
+   do vl <- Parser dvAdditive
+      symbol '<'
+      vr <- Parser dvAdditive
+      return (vl < vr)
+
+-- Arithmetic
 pAdditive :: Derivs -> Result Int
 Parser pAdditive =
    do traceM "Starting additive"
@@ -170,25 +202,25 @@ uniqueChars = aux keywords []
 
 pKeyword :: Derivs -> Result String
 Parser pKeyword =
-   do traceM "Starting Keyword"
+   do --traceM "Starting Keyword"
       s <- Parser dvMultipleChars
-      traceM $ "s: " ++ s ++ ". end"
+      --traceM $ "s: " ++ s ++ ". end"
       if s `elem` keywords then return s
       else fail []
 
 pMultipleChars :: Derivs -> Result [Char]
 Parser pMultipleChars =
    do c <- oneOf uniqueChars
-      traceM $ "char: " ++ [c]
+      --traceM $ "char: " ++ [c]
       s <- Parser dvMultipleChars
-      traceM (c:s)
+      --traceM (c:s)
       return (c:s)
    <|>
    do return []
 
 pSymbol :: Derivs -> Result Char
 Parser pSymbol =
-   do c <- oneOf "+-*/%()"
+   do c <- oneOf "+-*/%()<>"
       Parser dvWhitespace
       return c
 

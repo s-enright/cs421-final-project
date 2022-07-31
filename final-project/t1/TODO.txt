@@ -1,16 +1,12 @@
 General features
 =====================
 * Error messages: return Result Derivs
-* Floating pt numbers
-x Handle numbers with multiple digits
-x Handle initial whitespace
-x Better solution for digits
-x Negative numbers
+* Trim whitespace when possible
 
 Languages
 ======================
-* Extend language to include non-arithmetic grammar
 * Write non-packrat parser
+* Re-write grammer to allow left recursion
 
 Performance
 =====================
