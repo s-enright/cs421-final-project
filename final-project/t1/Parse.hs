@@ -1,6 +1,6 @@
 module Parse where
 
-import Control.Applicative hiding ((<|>))
+--import Control.Applicative ( Alternative((<|>), empty) )
 import Control.Monad (liftM, ap, when, unless)
 import Debug.Trace ( traceM )
 import Data.Char ( isSpace, isDigit, digitToInt )
@@ -59,18 +59,24 @@ instance Monad Parser where
 instance MonadFail Parser where
    fail _ = Parser (const NoParse)
 
---instance Alternative Parser where
---   empty = NoParse
-
+-- Alternative function
 (<|>) :: Parser v -> Parser v -> Parser v
 (Parser p1) <|> (Parser p2) = Parser pre
    where pre d = post d (p1 d)
          post d NoParse = p2 d
          post d r = r
 
+{-
+instance Alternative Parser where
+   empty = NoParse
+   (Parser l) <|> NoParse = (\d -> Parsed l Derivs)
+-}
 
 -- Main parse function
 -- Create a result matrix for an input string
+-- The double recursion in this function allows the result
+-- matrix to lazily be evaluated while advancing through
+-- the input string one character at a time.
 parse :: String -> Derivs
 parse s = d where
    d      = Derivs skip seq ite wd
@@ -120,6 +126,7 @@ Parser validInput =
    do return arithExp
 -}
 
+-- Parse an explicitly given "skip" statement
 pSkip :: Derivs -> Result ()
 Parser pSkip =
    do keyword "skip"
@@ -128,6 +135,9 @@ Parser pSkip =
    <|>
    do Parser pIfThenElse
 
+-- Parse an if-then-else statement. If the "if" expression
+-- evaluates to true, the "then" statement is executed.
+-- Otherwise, the "else" statement is executed.
 pIfThenElse :: Derivs -> Result ()
 Parser pIfThenElse =
    do keyword "if"
@@ -146,6 +156,7 @@ Parser pIfThenElse =
    <|>
    do Parser pWhileDo
 
+-- Parse a do-while loop statement
 pWhileDo :: Derivs -> Result ()
 Parser pWhileDo =
    do keyword "do"
@@ -160,6 +171,7 @@ Parser pWhileDo =
    <|>
    do Parser pSequence
 
+-- Parse a sequence of commands
 pSequence :: Derivs -> Result ()
 Parser pSequence =
    do keyword "do"
@@ -171,6 +183,7 @@ Parser pSequence =
 
 
 -- Boolean
+-- Parse an explicitly given boolean value
 pBoolVal :: Derivs -> Result Bool
 Parser pBoolVal =
    do keyword "true"
@@ -181,6 +194,7 @@ Parser pBoolVal =
    <|>
    do Parser dvRelExpr
 
+-- Parse a comparison of arithmetic values
 pRelExpr :: Derivs -> Result Bool
 Parser pRelExpr =
    do traceM "Starting pRelexpr"
@@ -195,6 +209,7 @@ Parser pRelExpr =
       return (vl < vr)
 
 -- Arithmetic
+-- Parse an expression with addition or subtraction
 pAdditive :: Derivs -> Result Int
 Parser pAdditive =
    do traceM "Starting additive"
@@ -210,6 +225,8 @@ Parser pAdditive =
    <|>
    do Parser dvMultitive
 
+-- Parse an expression that uses multiplication,
+-- division, or a modulo operation
 pMultitive :: Derivs -> Result Int
 Parser pMultitive =
    do vleft <- Parser dvPrimary
@@ -231,6 +248,7 @@ Parser pMultitive =
    <|>
    do Parser dvPrimary
 
+-- Parse an arithmetic expression within parentheses
 pPrimary :: Derivs -> Result Int
 Parser pPrimary =
    do symbol '('
@@ -240,6 +258,7 @@ Parser pPrimary =
    <|>
    do Parser dvInteger
 
+-- Parse an integer, which may be negative
 pInteger :: Derivs -> Result Int
 Parser pInteger =
    do Parser dvWhitespace
@@ -253,6 +272,7 @@ Parser pInteger =
       Parser dvWhitespace
       return v
 
+-- Accumulate an integer value by combining single-digit numbers
 pMultipleDigits :: Derivs -> Result (Int, Int)
 Parser pMultipleDigits =
    do v <- Parser dvSingleDigit
@@ -262,6 +282,7 @@ Parser pMultipleDigits =
    do v <- Parser dvSingleDigit
       return (v, 1)
 
+-- Parse a single-digit number
 pSingleDigit :: Derivs -> Result Int
 Parser pSingleDigit =
    do digitToInt <$> digit
