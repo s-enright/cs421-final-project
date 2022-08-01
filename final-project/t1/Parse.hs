@@ -89,7 +89,7 @@ parse s = d where
    skip   = pSkip d
    seq    = pSequence d
    ite    = pIfThenElse d
-   wd     = pWhileDo d 
+   wd     = pWhileDo d
    -- Boolean
    boolv  = pBoolVal d
    relex  = pRelExpr d
@@ -112,7 +112,7 @@ parse s = d where
 
 -- vvv Begin parsing functions for non-terminals
 command :: Parser ()
-command = Parser pSkip
+command = Parser pIfThenElse
 boolExp :: Parser Bool
 boolExp = Parser pBoolVal
 arithExp :: Parser Int
@@ -136,14 +136,6 @@ Parser pValidInput =
    do a <- arithExp
       return (IntExp a)
 
--- Parse an explicitly given "skip" statement
-pSkip :: Derivs -> Result ()
-Parser pSkip =
-   do keyword "skip"
-      traceM "skipping..."
-      return ()
-   <|>
-   do Parser pIfThenElse
 
 -- Parse an if-then-else statement. If the "if" expression
 -- evaluates to true, the "then" statement is executed.
@@ -154,15 +146,15 @@ Parser pIfThenElse =
       b <- boolExp
       keyword "then"
       -- Case 1: boolean is true
-      when b $ do c <- command
+      when b $ do cif <- command
                   keyword "else"
                   skipUntil "fi"
-                  return ()
+                  return cif
       -- Case 2: boolean is false
       unless b $ do skipUntil "else"
-                    c <- command
+                    cel <- command
                     keyword "fi"
-                    return ()
+                    return cel
    <|>
    do Parser pWhileDo
 
@@ -171,12 +163,9 @@ pWhileDo :: Derivs -> Result ()
 Parser pWhileDo =
    do keyword "do"
       s_do <- collectUntil "while"
-      --b <- boolExp
       b_while <- collectUntil "od"
       traceM $ "Do: " ++ s_do ++ ", While: " ++ b_while ++ "."
-      if b_while /= "" then traceM "ok" else return ()
-      --when b $ do Parser dvWhileDo
-      --unless b $ do keyword "od"
+      evalWhile s_do b_while
       return ()
    <|>
    do Parser pSequence
@@ -184,13 +173,20 @@ Parser pWhileDo =
 -- Parse a sequence of commands
 pSequence :: Derivs -> Result ()
 Parser pSequence =
-   do keyword "do"
+   do keyword "seq"
       c1 <- command
       symbol ';'
       c2 <- command
-      keyword "od"
+      keyword "qes"
       return ()
+   <|>
+   do Parser pSkip
 
+-- Parse an explicitly given "skip" statement
+pSkip :: Derivs -> Result ()
+Parser pSkip =
+   do keyword "skip"
+      return ()
 
 -- Boolean
 -- Parse an explicitly given boolean value
@@ -207,8 +203,7 @@ Parser pBoolVal =
 -- Parse a comparison of arithmetic values
 pRelExpr :: Derivs -> Result Bool
 Parser pRelExpr =
-   do traceM "Starting pRelexpr"
-      vl <- arithExp
+   do vl <- arithExp
       symbol '>'
       vr <- arithExp
       return (vl > vr)
@@ -222,12 +217,11 @@ Parser pRelExpr =
 -- Parse an expression with addition or subtraction
 pAdditive :: Derivs -> Result Int
 Parser pAdditive =
-   do traceM "Starting additive"
-      vleft <- Parser dvMultitive
+   do vleft <- Parser dvMultitive
       symbol '+'
       vright <- Parser dvAdditive
       return $ vleft + vright
-   <|> 
+   <|>
    do vleft <- Parser dvMultitive
       symbol '-'
       vright <- Parser dvAdditive
@@ -327,7 +321,7 @@ Parser pMultipleChars =
 pSymbol :: Derivs -> Result Char
 Parser pSymbol =
    do Parser dvWhitespace
-      c <- oneOf "+-*/%()<>"
+      c <- oneOf symbolList
       Parser dvWhitespace
       return c
 
@@ -345,7 +339,11 @@ Parser pWhitespace =
 
 -- Helper functions for lexical analysis
 keywordList :: [String]
-keywordList = ["true", "false", "skip", "if", "then", "else", "fi", "while", "do", "od"]
+keywordList = ["true", "false", "if", "then", "else", "fi",
+               "while", "do", "od", "seq", "qes", ";", "skip"]
+
+symbolList :: String
+symbolList = "+-*/%()<>;"
 
 -- Generates a list of allowed characters in a keyword
 uniqueChars :: [Char]
@@ -369,7 +367,8 @@ sat (Parser p) predicate = Parser parse
 
 keyword :: String -> Parser String
 keyword s =
-   do Parser dvWhitespace
+   do --traceM $ "  looking for keyword: " ++ s
+      Parser dvWhitespace
       s' <- Parser dvKeyword
       if s' == s then return s
                  else fail []
@@ -393,11 +392,13 @@ collectUntil s = aux s ""
          return acc
       <|>
       do c <- Parser dvChar
-         aux kw (acc ++ [c]) 
+         aux kw (acc ++ [c])
 
 symbol :: Char -> Parser Char
 symbol c =
-   do c' <- Parser dvSymbol
+   do --traceM $ "  looking for symbol: " ++ [c]
+      Parser dvWhitespace
+      c' <- Parser dvSymbol
       if c' == c then return c
                  else fail []
 
@@ -406,3 +407,12 @@ space = sat anyChar isSpace
 
 digit :: Parser Char
 digit = sat anyChar isDigit
+
+evalWhile :: String -> String -> Parser ()
+evalWhile doStr whileStr =
+   do case pValidInput (parse doStr) of
+        Parsed ty de -> return ()
+        NoParse -> fail []
+      case pValidInput (parse whileStr) of
+        Parsed (BoolExp b) de -> when b $ evalWhile doStr whileStr
+        _ -> fail []
