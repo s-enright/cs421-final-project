@@ -20,16 +20,12 @@ description:  Please see the README on GitHub at <https://github.com/s-enright/c
 
 dependencies:
 - base >= 4.7 && < 5
-- unordered-containers
-- parsec
-- mtl
 
 library:
   source-dirs: src
   exposed-modules:
-  - Lib
+  - Core
   - Parse
-  - ArithPackrat
 
 executables:
   final-project-exe:
@@ -41,17 +37,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - final-project
-    - parsec
-
-  t1:
-    main:                Main.hs
-    source-dirs:         
-      - t1
-    ghc-options:
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -threaded
-
 
 tests:
   final-project-test:
