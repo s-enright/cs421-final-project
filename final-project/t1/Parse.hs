@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use <$>" #-}
 module Parse where
 
 --import Control.Applicative ( Alternative((<|>), empty) )
@@ -116,15 +118,23 @@ boolExp = Parser pBoolVal
 arithExp :: Parser Int
 arithExp = Parser pAdditive
 
-{-
-validInput :: Derivs -> Result (Parser ())
-Parser validInput =
-   do return command
+
+data Types = Command
+           | BoolExp Bool
+           | IntExp Int
+
+-- Main entry into packrat parser.
+-- The input must belong to one of three fundmental types.
+pValidInput :: Derivs -> Result Types
+Parser pValidInput =
+   do c <- command
+      return Command
    <|>
-   do return boolExp
+   do b <- boolExp
+      return (BoolExp b)
    <|>
-   do return arithExp
--}
+   do a <- arithExp
+      return (IntExp a)
 
 -- Parse an explicitly given "skip" statement
 pSkip :: Derivs -> Result ()
@@ -352,7 +362,7 @@ oneOf chs = sat anyChar (`elem` chs)
 sat :: Parser v -> (v -> Bool) -> Parser v
 sat (Parser p) predicate = Parser parse
       where parse dvs = check dvs (p dvs)
-            check dvs result@(Parsed val rem) =
+            check dvs result@(Parsed val _) =
                if predicate val then result
                else NoParse
             check dvs none = none

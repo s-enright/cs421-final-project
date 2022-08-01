@@ -32,11 +32,13 @@ repl = do input <- prompt "> " >> getLine
           case input of
             "quit" -> return ()
             "exit" -> return ()
-            _      -> case pAdditive (parse input) of
-                            Parsed v rem ->
-                              do print v
-                                 repl
-                            _ -> error "Parse error"
+            _      -> case pValidInput (parse input) of
+                           (Parsed Command _) -> repl
+                           (Parsed (BoolExp b) _) -> do print b
+                                                        repl
+                           (Parsed (IntExp i) _) -> do print i
+                                                       repl
+                           _ -> error "Parse error"
 
 
 main :: IO ()
