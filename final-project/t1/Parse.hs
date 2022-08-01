@@ -1,12 +1,19 @@
 module Parse where
 
 import Control.Applicative hiding ((<|>))
-import Control.Monad (liftM, ap)
+import Control.Monad (liftM, ap, when, unless)
 import Debug.Trace ( traceM )
 import Data.Char ( isSpace, isDigit, digitToInt )
 import Data.List (nub)
+import Data.Bool (bool)
 
 data Derivs = Derivs {
+               -- Commands
+               dvSkip           :: Result (),
+               --dvAssign         :: Result (),
+               dvSequence       :: Result (),
+               dvIfThenElse     :: Result (),
+               dvWhileDo        :: Result (),
                -- Boolean
                dvBoolVal        :: Result Bool,
                dvRelExpr        :: Result Bool,
@@ -66,7 +73,15 @@ instance MonadFail Parser where
 -- Create a result matrix for an input string
 parse :: String -> Derivs
 parse s = d where
-   d      = Derivs boolv relex add mult prim int muldig sindig kwd mulchr sym spc chr
+   d      = Derivs skip seq ite wd
+                   boolv relex
+                   add mult prim int
+                   muldig sindig kwd mulchr sym spc chr
+   -- Commands
+   skip   = pSkip d
+   seq    = pSequence d
+   ite    = pIfThenElse d
+   wd     = pWhileDo d 
    -- Boolean
    boolv  = pBoolVal d
    relex  = pRelExpr d
@@ -88,42 +103,107 @@ parse s = d where
 
 
 -- vvv Begin parsing functions for non-terminals
+command :: Parser ()
+command = Parser pSkip
+boolExp :: Parser Bool
+boolExp = Parser pBoolVal
+arithExp :: Parser Int
+arithExp = Parser pAdditive
+
+{-
+validInput :: Derivs -> Result (Parser ())
+Parser validInput =
+   do return command
+   <|>
+   do return boolExp
+   <|>
+   do return arithExp
+-}
+
+pSkip :: Derivs -> Result ()
+Parser pSkip =
+   do keyword "skip"
+      traceM "skipping..."
+      return ()
+   <|>
+   do Parser pIfThenElse
+
+pIfThenElse :: Derivs -> Result ()
+Parser pIfThenElse =
+   do keyword "if"
+      b <- boolExp
+      keyword "then"
+      -- Case 1: boolean is true
+      when b $ do c <- command
+                  keyword "else"
+                  skipUntil "fi"
+                  return ()
+      -- Case 2: boolean is false
+      unless b $ do skipUntil "else"
+                    c <- command
+                    keyword "fi"
+                    return ()
+   <|>
+   do Parser pWhileDo
+
+pWhileDo :: Derivs -> Result ()
+Parser pWhileDo =
+   do keyword "do"
+      s_do <- collectUntil "while"
+      --b <- boolExp
+      b_while <- collectUntil "od"
+      traceM $ "Do: " ++ s_do ++ ", While: " ++ b_while ++ "."
+      if b_while /= "" then traceM "ok" else return ()
+      --when b $ do Parser dvWhileDo
+      --unless b $ do keyword "od"
+      return ()
+   <|>
+   do Parser pSequence
+
+pSequence :: Derivs -> Result ()
+Parser pSequence =
+   do keyword "do"
+      c1 <- command
+      symbol ';'
+      c2 <- command
+      keyword "od"
+      return ()
+
 
 -- Boolean
 pBoolVal :: Derivs -> Result Bool
 Parser pBoolVal =
-   do v <- Parser dvKeyword
-      case v of
-         "true"  -> return True
-         "false" -> return False
-         _       -> fail []
+   do keyword "true"
+      return True
+   <|>
+   do keyword "false"
+      return False
    <|>
    do Parser dvRelExpr
 
+pRelExpr :: Derivs -> Result Bool
 Parser pRelExpr =
    do traceM "Starting pRelexpr"
-      vl <- Parser dvAdditive
+      vl <- arithExp
       symbol '>'
-      vr <- Parser dvAdditive
+      vr <- arithExp
       return (vl > vr)
    <|>
-   do vl <- Parser dvAdditive
+   do vl <- arithExp
       symbol '<'
-      vr <- Parser dvAdditive
+      vr <- arithExp
       return (vl < vr)
 
 -- Arithmetic
 pAdditive :: Derivs -> Result Int
 Parser pAdditive =
    do traceM "Starting additive"
-      Parser dvWhitespace
       vleft <- Parser dvMultitive
       symbol '+'
       vright <- Parser dvAdditive
       return $ vleft + vright
    <|> 
-   do Parser dvWhitespace
-      vleft <- Parser dvMultitive
+   do vleft <- Parser dvMultitive
       symbol '-'
       vright <- Parser dvAdditive
       return $ vleft - vright
@@ -162,12 +242,14 @@ Parser pPrimary =
 
 pInteger :: Derivs -> Result Int
 Parser pInteger =
-   do symbol '-'
+   do Parser dvWhitespace
+      symbol '-'
       (v,n) <- Parser dvMultipleDigits
       Parser dvWhitespace
       return (-v)
    <|>
-   do (v,n) <- Parser dvMultipleDigits
+   do Parser dvWhitespace
+      (v,n) <- Parser dvMultipleDigits
       Parser dvWhitespace
       return v
 
@@ -191,21 +273,13 @@ Parser pSingleDigit =
 
 -- From Ford paper
 -- Parse an operator followed by optional whitespace
-keywords :: [String]
-keywords = ["true", "false", "skip", "if", "then", "else", "while", "do"]
-
--- Generates a list of allowed characters in a keyword
-uniqueChars :: [Char]
-uniqueChars = aux keywords []
-  where aux []     acc = acc
-        aux (l:ls) acc = aux ls (nub (l ++ acc))
 
 pKeyword :: Derivs -> Result String
 Parser pKeyword =
    do --traceM "Starting Keyword"
       s <- Parser dvMultipleChars
       --traceM $ "s: " ++ s ++ ". end"
-      if s `elem` keywords then return s
+      if s `elem` keywordList then return s
       else fail []
 
 pMultipleChars :: Derivs -> Result [Char]
@@ -218,9 +292,11 @@ Parser pMultipleChars =
    <|>
    do return []
 
+-- Check for allowed character symbols
 pSymbol :: Derivs -> Result Char
 Parser pSymbol =
-   do c <- oneOf "+-*/%()<>"
+   do Parser dvWhitespace
+      c <- oneOf "+-*/%()<>"
       Parser dvWhitespace
       return c
 
@@ -237,6 +313,15 @@ Parser pWhitespace =
 
 
 -- Helper functions for lexical analysis
+keywordList :: [String]
+keywordList = ["true", "false", "skip", "if", "then", "else", "fi", "while", "do", "od"]
+
+-- Generates a list of allowed characters in a keyword
+uniqueChars :: [Char]
+uniqueChars = aux keywordList []
+  where aux []     acc = acc
+        aux (l:ls) acc = aux ls (nub (l ++ acc))
+
 anyChar :: Parser Char
 anyChar = Parser dvChar
 
@@ -250,6 +335,34 @@ sat (Parser p) predicate = Parser parse
                if predicate val then result
                else NoParse
             check dvs none = none
+
+keyword :: String -> Parser String
+keyword s =
+   do Parser dvWhitespace
+      s' <- Parser dvKeyword
+      if s' == s then return s
+                 else fail []
+
+-- Consume characters until the
+-- desired keyword is encountered
+skipUntil :: String -> Parser String
+skipUntil s =
+   do keyword s
+      return s
+   <|>
+   do c <- Parser dvChar
+      skipUntil s
+
+-- Gather characters that appear before keyword
+collectUntil :: String -> Parser String
+collectUntil s = aux s ""
+   where
+   aux kw acc =
+      do keyword kw
+         return acc
+      <|>
+      do c <- Parser dvChar
+         aux kw (acc ++ [c]) 
 
 symbol :: Char -> Parser Char
 symbol c =
