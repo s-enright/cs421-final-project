@@ -1,30 +1,37 @@
 # Final Project
 *CS 421*
+
 *Summer 2022*
 
 Sean Enright
+
 August 4, 2022
+
 
 # Overview
 ```
 Describe the motivation, goals, and broad accomplishments of your project in general terms.
 ```
+I have implemented a packrat parser for a simple imperative programming language in Haskell, based on Bryan Ford's 2002 paper, "Packrat parsing: simple, powerful, lazy, linear time".
+
+Packrat parsing is a method of implementing parsers that run in linear time with backtracking and unlimited lookahead for LL(n) or LR(n) grammars, among others. Its backtracking and lookeahead allows a few difficult parsing problems to be handled with relative ease, including rules for the longest match, followed-by and not-followed by. It also allows for simple integration of lexical analysis, so packrat parsers typically do not have separate lexing steps, but rather interleave lexing and parsing.
+
+These benefits come at the expense of memory consumption, which is significantly higher in packrat parsers than typical parsers for LL(n) and LR(n) grammars. This limitation prevented this style of parsing, first described in the 1970s, from gaining prominence unitl the early 2000s, when hardware and optimizing compilers mades these downsides an acceptable tradeoff for certain applications.
+
+Ford describes a packrat parser implementation through a grammar for a trivial language capable of handling basic arithmetic expressions. I have extended this grammar to express a variant of an imperative programming language [3], following Ford's outline. This programming language adds boolean expressions and command statements to demonstrate the application of packrat parsing to different data types and control structures.
+
+My implementation uses monadic combinators for clarity and to reduce the amount of code.
 
 
 
 # Implementation
-```
-A brief description of the important aspects of your implementation, in terms of
-  (a) the major tasks or capabilities of your code;
-  (b) components of the code;
-  (d) status of the project – what works well,  what works partially,
-      and and what is not implemented at all. You MUST  compare these
-      with your original proposed goals in the project proposal.
-```
 
-## Capabilities
+## Major Tasks and Capabilities
+
+### Grammar
 
 ## Components of the Code
+
 
 ## Status of the Project
 
@@ -42,14 +49,37 @@ My planned implementation schedule will divide the month of July as follows:
 • Week 4: Summarize results, package source code and report.
 
 ### Evaluation of Project Status
+```
+what works well,  what works partially,
+      and and what is not implemented at all.
+```
 
 
-# Installation
+# Using the Packrat Parser
+## Installation
 This project uses stack for build management.
 
 To build: `stack build`
-To run the packrat repl: `stack run`
+
+To run the packrat REPL: `stack run`
+
 To execute the test suite: `stack test`
+
+## REPL
+`stack run` will build and start the REPL. The result of the entered expression will be printed on the next line.
+
+```
+>1 + 2
+3
+```
+
+```
+>2*(3+4)
+14
+```
+
+Enter `exit` or `quit` to leave the REPL.
+
 
 # Tests
 ```
