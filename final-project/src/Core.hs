@@ -6,6 +6,7 @@ import Data.Char ( isSpace, isDigit, digitToInt )
 import Data.List (nub)
 import Data.Bool (bool)
 
+
 -- The Derivs type represents a column of the parsing results
 -- matrix. Each field corresponds to a non-terminal, with a type
 -- that is the result of parsing the symbol.
@@ -14,6 +15,8 @@ import Data.Bool (bool)
 -- accessor. For example, for the field with accessor dvBoolVal,
 -- there is parsing function pBoolVal.
 data Derivs = Derivs {
+               -- Top level
+               dvInputString    :: Result Types,
                -- Commands
                --dvAssign         :: Result (),
                dvIfThenElse     :: Result (),
@@ -65,6 +68,9 @@ instance Applicative Parser where
   pure  = return
   (<*>) = ap
 
+-- Monadic parser that chains the results of parsing functions
+-- The result of each parsing function iterates through the
+-- columns of the parsing matrix by one or more characters.
 -- From Ford listing
 instance Monad Parser where
    (Parser p) >>= f = Parser pre

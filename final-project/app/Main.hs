@@ -2,7 +2,7 @@ module Main where
 
 import System.IO (hPutStrLn, hPutStr, stdout, hFlush)
 
-import Parse ( pValidInput, parse )
+import Parse ( pInputString, parse )
 import Core ( Result(Parsed), Types(IntExp, Command, BoolExp) )
 
 
@@ -20,7 +20,7 @@ repl = do input <- prompt "Packrat> " >> getLine
           case input of
             "quit" -> return ()
             "exit" -> return ()
-            _      -> case pValidInput (parse input) of
+            _      -> case pInputString (parse input) of
                            (Parsed Command _) -> repl
                            (Parsed (BoolExp b) _) -> do print b
                                                         repl

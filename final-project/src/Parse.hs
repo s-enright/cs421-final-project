@@ -26,15 +26,18 @@ import Data.Char (digitToInt)
 -- functions will not actually be referenced in a given column.
 parse :: String -> Derivs
 parse s = d where
-   d      = Derivs skip seq ite wd
+   d      = Derivs instr
+                   ite wd seq skip
                    boolv relex
                    add mult prim int
                    muldig sindig kwd mulchr sym spc chr
+   -- Top level
+   instr = pInputString d
    -- Commands
-   skip   = pSkip d
-   seq    = pSequence d
    ite    = pIfThenElse d
    wd     = pWhileDo d
+   seq    = pSequence d
+   skip   = pSkip d
    -- Boolean
    boolv  = pBoolVal d
    relex  = pRelExpr d
@@ -84,8 +87,8 @@ pCommand = pIfThenElse
 
 -- Main entry into packrat parser.
 -- The input must belong to one of three fundmental types.
-pValidInput :: Derivs -> Result Types
-Parser pValidInput =
+pInputString :: Derivs -> Result Types
+Parser pInputString =
    do c <- command
       return Command
    <|>
@@ -134,7 +137,7 @@ Parser pWhileDo =
       evalWhile s_do b_while
       return ()
    <|>
-   do Parser pSequence
+   do Parser dvSequence
 
 -- Parse a sequence of commands
 -- e.g. "seq [c0] ; [c1] qes"
@@ -318,9 +321,9 @@ Parser pWhitespace =
 -- Continuously parse a command string until a boolean expression string and evaluates false
 evalWhile :: String -> String -> Parser ()
 evalWhile doStr whileStr =
-   do case pValidInput (parse doStr) of
+   do case dvInputString (parse doStr) of
         Parsed ty de -> return ()
         NoParse -> fail []
-      case pValidInput (parse whileStr) of
+      case dvInputString (parse whileStr) of
         Parsed (BoolExp b) de -> when b $ evalWhile doStr whileStr
         _ -> fail []
