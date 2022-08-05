@@ -231,12 +231,11 @@ Coming up with appropriate tests is one of the most important part of  good soft
 
 # References
 1. Bryan Ford. 2002. Packrat parsing: simple, powerful, lazy, linear time, functional pearl. *SIGPLAN Not.* 37, 9 (September 2002), 36–47. https://doi.org/10.1145/583852.581483
-/final-project/doc/Bryan_Ford_Packrat_Parsing_Paper.pdf
+
+[Packrat parsing: simple, powerful, lazy, linear time, functional pearl](/final-project/doc/Bryan_Ford_Packrat_Parsing_Paper.pdf)
 
 2. Glynn Winskel. 2001. *The Formal Semantics of Programming Languages: An Introduction*. 12-24. MIT Press.
 
 3. Bryan Ford. 2002. Packet parsing: a practical linear-time algorithm with backtracking. Master's Thesis. MIT, Cambridge, MA. Retrieved August 2, 2022 from https://dspace.mit.edu/handle/1721.1/87310
 
-4. Nate Foster. 2012. Lecture #6: The IMP Language. CS 4110, Programming Languages and Logics, Cornell. Retrieved August 2, 2022 from https://www.cs.cornell.edu/courses/cs4110/2012fa/lectures/lecture06.pdf
-
-*Note: Documents for these references are included in /final-project/doc/*
+[Packet parsing: a practical linear-time algorithm with backtracking](/final-project/doc/Bryan_Ford_Master's_Thesis-MIT.pdf)
