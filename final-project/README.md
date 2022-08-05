@@ -3,11 +3,11 @@
 
 Sean Enright
 
-August 4, 2022
+August 5, 2022
 
 
 # Overview
-I have implemented a packrat parser for a simple imperative programming language in Haskell, based on Bryan Ford's 2002 paper, "Packrat parsing: simple, powerful, lazy, linear time".
+I have implemented a packrat parser for a simple imperative programming language in Haskell, based on Bryan Ford's 2002 paper, "Packrat parsing: simple, powerful, lazy, linear time"[1].
 
 Packrat parsing is a method of implementing parsers that run in linear time with backtracking and unlimited lookahead for LL(n) or LR(n) grammars, among others. Its backtracking and lookahead allow a few difficult parsing problems to be handled with relative ease, including rules for the longest match, followed-by and not-followed by. It also allows for simple integration of lexical analysis, so packrat parsers typically do not have separate lexing and parsing stages, but rather interleave them.
 
@@ -27,7 +27,7 @@ A REPL is provided to allow a user interface to the parser.
 ### Capabilities of the Parser
 The key concept behind packrat parsing is the use of a specialized data structure, consisting of a matrix of possible results for each of the parse functions in the grammar for each of the input characters. The results of parsing each character of input are memoized, potentially allowing for greater efficiency in accessing repeated patterns. For an input string of length *n*, and *p* parsing functions, this matrix will have (*n* + 1) \* *p* cells, with the *n* + 1 term accounting for each character of the string as well as an empty string. This is potentially a very large table, so in order to efficiently make use of it, this parsing style effectively requires the use of a lazily evaluated language. For this reason, and for the potential to implement it via a monadic approach, Haskell was chosen for this project.
 
-Parsing functions are also included for lexical analysis, including matching whitespace of varying length, matching sets of operators and keywords, and of matching numerical characters and forming them into possibly negative-valued integers.
+Parsing functions are also included for lexical analysis, including matching whitespace of varying length, matching sets of operators and keywords, and of matching numerical characters and forming them into possibly signed integers.
 
 
 ### Grammar
@@ -82,6 +82,7 @@ Another challenge was updating the example code to work with contemporary GHC Ha
 The last hurdle was adapting the parser beyond the limitation of arithmetic expressions. While extending it to boolean expressions was without issue, adding commands required several new accessory parsing functions and some creative solutions to introduce control structures for if-then-else commands and do-while loops, without leaving the parsing results matrix. In these cases, my solution was to use the unlimited lookahead capability of the parser to scan for the strings of interest between terminal symbols and handle them accordingly.
 
 For example, in the "if-then-else" command, if the "if" expression evaluates to true, the "else" command is executed and the parser scans the following string until the terminal "fi" is encountered to exit the parser successfully. If the "if" expression is false, then all characters until "else" are scanned and ignored, and the following command is parsed and evaluated.
+
 ```
 pIfThenElse :: Derivs -> Result ()
 Parser pIfThenElse =
@@ -119,7 +120,7 @@ Parser pWhileDo =
 
 
 ## Components of the Code
-The key data structures of the parser are found in \/src\/Core.hs
+The key data structures of the parser are found in /final-project/src/Core.hs
 
 A column of the specialized parsing matrix described above is represented by the algebraic data type Derivs, which uses record syntax to create accessor functions that can be passed into parsing functions. Each field is of type Result, representing the result of an elementary parse.
 
@@ -215,27 +216,20 @@ To execute the test suite: `stack test`
 Enter `exit` or `quit` to leave the REPL.
 
 
-
-
-
-
-
 # Tests
-```
-Coming up with appropriate tests is one of the most important part of  good software development. 
- Your tests should include unit tests, feature  tests, and larger test codes.
- Give a short description of the tests  used, performance results if appropriate 
- (e.g., memory consumption for  garbage collection) etc. Be sure to explain how these tests exercise the  concept(s) you've implemented.
- ```
 
+The test suite provided through the `stack test` command provides input strings to the parser and compares the output of the parser with the expected value. Through this method, the tests require the use of the packrat parsing algorithm to process input.
+
+The tests include:
+* Testing of arithmetic expression values
 
 # References
 1. Bryan Ford. 2002. Packrat parsing: simple, powerful, lazy, linear time, functional pearl. *SIGPLAN Not.* 37, 9 (September 2002), 36–47. https://doi.org/10.1145/583852.581483
 
-[Packrat parsing: simple, powerful, lazy, linear time, functional pearl](/final-project/doc/Bryan_Ford_Packrat_Parsing_Paper.pdf)
+   [Packrat parsing: simple, powerful, lazy, linear time, functional pearl](/final-project/doc/Bryan_Ford_Packrat_Parsing_Paper.pdf)
 
 2. Glynn Winskel. 2001. *The Formal Semantics of Programming Languages: An Introduction*. 12-24. MIT Press.
 
 3. Bryan Ford. 2002. Packet parsing: a practical linear-time algorithm with backtracking. Master's Thesis. MIT, Cambridge, MA. Retrieved August 2, 2022 from https://dspace.mit.edu/handle/1721.1/87310
 
-[Packet parsing: a practical linear-time algorithm with backtracking](/final-project/doc/Bryan_Ford_Master's_Thesis-MIT.pdf)
+   [Packet parsing: a practical linear-time algorithm with backtracking](/final-project/doc/Bryan_Ford_Master's_Thesis-MIT.pdf)
