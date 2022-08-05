@@ -21,6 +21,9 @@ allTests = [(testParserResult pArithExp inputInt, "Arithmetic expressions: Signe
            ,(testParserResult pArithExp inputArith, "Arithmetic expressions: Combined operators")
            ,(testParserResult pBoolExp inputBool, "Boolean expressions: Boolean expressions and arithmetic comparison")
            ,(testParserResult pCommand inputCommand, "Commands: Successful execution of commands")
+           ,(testParserResult pArithExp inputArithWhitespace, "Whitespace: Arithmetic expressions")
+           ,(testParserResult pBoolExp inputBoolWhitespace, "Whitespace: Boolean expressions")
+           ,(testParserResult pCommand inputCommandWhitespace, "Whitespace: Commands")
            ]
 
 inputInt =  [("0", 0)
@@ -133,6 +136,44 @@ inputCommand = [("skip", ())
                ,("do seq if 3>1 then skip else skip fi ; if 3<1 then skip else skip fi qes while 3<1 od", ())
                ]
 
+inputArithWhitespace = [("   1", 1)
+                       ,("2   ", 2)
+                       ,("3    ", 3)
+                       ,("     4    ", 4)
+                       ,("    1+2", 3)
+                       ,("1+2    ", 3)
+                       ,("   1   +2    ", 3)
+                       ,("   1+   2   ", 3)
+                       ,("  1   +  2  ", 3)
+                       ,("(  5+6)*7", 77)
+                       ,("(   5+6 )*7", 77)
+                       ,("(    5+6   )   *7", 77)
+                       ,("  (     5+  6   )  *7", 77)
+                       ,("     (12+34)*56+(77%8)-3*(162/-6)%-25", 2587)
+                       ,("(12+34)*56+(77%8)-3*(162/-6)%-25  ", 2587)
+                       ,("   (   12  +   34   )   *   56   +   (   77   %   8   )   -3   *   (   162   /   -6   )   %   -   25", 2587)
+                       ,("          (12+34)*56+(77%8)-3*(162/-6)%-25        ", 2587)
+                       ,("(12+   34)*56+(77%8)-3*(162/-6)%-25", 2587)
+                       ,("(12   +34)*56+(77%8)-3*(162/-6)%-25", 2587)
+                       ,("(12+34)*56+(77%8)-3*(162/-6)%-25", 2587)
+                       ]
+
+inputBoolWhitespace = [("   true", True)
+                      ,("true   ", True)
+                      ,("false  ", False)
+                      ,("    false", False)
+                      ,("  34>12", True)
+                      ,("34>12    ", True)
+                      ,("  34>12    ", True)
+                      ]
+
+inputCommandWhitespace= [("    skip", ())
+                        ,("skip    ", ())
+                        ,("   skip  ", ())
+                        ,(" do seq if 3 > 1 then skip else skip fi ; if 3 < 1 then skip else skip fi qes while 3 < 1 od ", ())
+                        ,("do seq if 3>1 then skip else skip fi ; if 3<1 then skip else skip fi qes while 3<1 od", ())
+                        ,("    do   seq    if   3  >  1   then   skip    else   skip   fi   ;  if   3   <   1   then    skip   else    skip   fi  qes    while  3  <  1  od   ", ())
+                        ]
 
 -- Test a list of input strings against their expected values by running
 -- a parser on each of them and reporting the result in a list of Booleans
