@@ -57,11 +57,6 @@ c ::= "skip" | X ":=" a | c0 ";" c1 | "if" b "then" c0 "else" c1 | "do" c "while
 This grammar is slightly modified to include the right associativity in arithmetic expressions, modify non-terminals to reduce ambiguity, reduce similar symbols, and to remove assignment.
 
 ```
-Additive  <- Multitive ‘+’ Additive | Multitive
-Multitive <- Primary ‘*’ Multitive | Primary
-Primary   <- ‘(’ Additive ‘)’ | Decimal
-Decimal   <- ‘0’ | ... | ‘9’
-
 Arithmetic Expressions
 a ::= m "+" a | m "-" a | m
 m := p "*" m | p "/" m | p "%" m | p
@@ -236,6 +231,7 @@ Coming up with appropriate tests is one of the most important part of  good soft
 
 # References
 1. Bryan Ford. 2002. Packrat parsing: simple, powerful, lazy, linear time, functional pearl. *SIGPLAN Not.* 37, 9 (September 2002), 36–47. https://doi.org/10.1145/583852.581483
+/final-project/doc/Bryan_Ford_Packrat_Parsing_Paper.pdf
 
 2. Glynn Winskel. 2001. *The Formal Semantics of Programming Languages: An Introduction*. 12-24. MIT Press.
 
