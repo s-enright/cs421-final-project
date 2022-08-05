@@ -2,7 +2,7 @@ import Core
 import Parse
 import Tests
 
-import System.Exit (exitWith, ExitCode(ExitSuccess, ExitFailure))
+import System.Exit (exitWith, ExitCode(ExitSuccess, ExitFailure), exitSuccess)
 import System.Timeout (timeout)
 import Control.Exception (try, evaluate, SomeException)
 
@@ -14,11 +14,12 @@ main =
       results <- runTests
       mapM_ (putStrLn . showTR) results
       putStrLn ""
-      let score = scorePct results
-      putStrLn $ "Score: " ++ show score ++ " / 100"
-      if score >= 100
+      let (scoreNum, testNum, scorePct) = scoreResult results
+      putStrLn $ show scoreNum ++ "/" ++ show testNum ++ " tests passed."  
+      putStrLn $ "(" ++ show scorePct ++ "% success rate)\n"
+      if scorePct >= 100
          then do putStrLn "All tests passed."
-                 exitWith ExitSuccess
+                 exitSuccess
          else do putStrLn "Some tests failed."
                  exitWith $ ExitFailure 1
 
@@ -35,9 +36,8 @@ showTR :: TestResult -> String
 showTR (score, name) = show score ++ ": " ++ name
 
 -- Display percent successful
-scorePct :: [TestResult] -> Int
-scorePct tests = let passed = length [t | t@(Pass, _) <- tests]
-                in  (passed * 100) `div` (length tests)
+scoreResult tests = let passed = length [t | t@(Pass, _) <- tests]
+                in  (passed, length tests, (passed * 100) `div` length tests)
 
 runTests :: IO [TestResult]
 runTests = let handleTest (test, name) = do score <- runTest test
@@ -45,7 +45,7 @@ runTests = let handleTest (test, name) = do score <- runTest test
            in  mapM handleTest allTests
 
 runTest :: [Bool] -> IO TestStatus
-runTest tests = 
+runTest tests =
    let test  = case and tests of
                True  -> Pass
                False -> Fail tests

@@ -2,34 +2,21 @@ module Main where
 
 import System.IO (hPutStrLn, hPutStr, stdout, hFlush)
 
-import Parse
-import Core
+import Parse ( pValidInput, parse )
+import Core ( Result(Parsed), Types(IntExp, Command, BoolExp) )
 
--- Evaluate an expression and return the unpackaged result,
--- ignoring any unparsed remainder.
-evalA s = case pAdditive (parse s) of
-               Parsed v rem -> v
-               _ -> error "Parse error"
 
-evalK s = case pKeyword (parse s) of
-            Parsed v rem -> v
-            _ -> error "Parse error"
-            
-eval p s = case p (parse s) of
-              Parsed v rem -> v
-              _ -> error "Parse error"
-
---- The REPL
---- --------
-
+-- Prompt user input and flush stream
 prompt :: String -> IO ()
 prompt str = putStr str >> hFlush stdout
 
+-- Display a string and flush stream
 printLn :: String -> IO ()
 printLn str = putStr str >> hFlush stdout
 
+-- REPL for packrat parser
 repl :: IO ()
-repl = do input <- prompt "> " >> getLine
+repl = do input <- prompt "Packrat> " >> getLine
           case input of
             "quit" -> return ()
             "exit" -> return ()
@@ -41,7 +28,7 @@ repl = do input <- prompt "> " >> getLine
                                                        repl
                            _ -> error "Parse error"
 
-
+-- Main entry into program
 main :: IO ()
 main = do putStrLn "Staring Packrat REPL..."
           repl
