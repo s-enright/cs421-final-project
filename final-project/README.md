@@ -31,7 +31,7 @@ Parsing functions are also included for lexical analysis, including matching whi
 
 
 ### Grammar
-To demonstrate a minimal implementation of a packrat parser, Ford introduces a trivial language described by the following grammar.
+To demonstrate a minimal implementation of a packrat parser, Ford introduces a trivial language described by the following grammar. This grammar uses non-terminals of different levels of the parsing chain to enforce associativity. The non-terminal on the right side of each operator is higher in the chain and therefore creates right-associativity.
 
 ```
 Additive  <- Multitive ‘+’ Additive | Multitive
@@ -42,10 +42,30 @@ Decimal   <- ‘0’ | ... | ‘9’
 
 This language was extended to closely approximate the IMP language[2], with a few minor modifications made to reduce ambiguity and reduce the amount of symbols for the sake of demonstration. 
 
-In Backus-Nauer form, this grammar is described as:
+In Backus-Nauer form, IMP grammar is described as:
 ```
 Arithmetic Expressions
-a ::= a0 "+" a1 | a0 "-" a1 | a0 "*" a1 | a0 "/" a1 | a0 "%" a1 | i
+a ::= "n" | "X" | a0 "+" a1 | a0 "-" a1 | a0 "*" a1 
+
+Boolean Expressions
+b ::= "true" | "false" | a0 "=" a1 | a0 "<=" a1 | "!"b | b0 "and" b1 | b0 "or" b1
+
+Commands
+c ::= "skip" | X ":=" a | c0 ";" c1 | "if" b "then" c0 "else" c1 | "do" c "while" b
+```
+
+This grammar is slightly modified to include the right associativity in arithmetic expressions, modify non-terminals to reduce ambiguity, reduce similar symbols, and to remove assignment.
+
+```
+Additive  <- Multitive ‘+’ Additive | Multitive
+Multitive <- Primary ‘*’ Multitive | Primary
+Primary   <- ‘(’ Additive ‘)’ | Decimal
+Decimal   <- ‘0’ | ... | ‘9’
+
+Arithmetic Expressions
+a ::= m "+" a | m "-" a | m
+m := p "*" m | p "/" m | p "%" m | p
+p := "(" a ")" | i
 i ::= "-" d | d
 d ::= "0" | ... | "9"
 
@@ -55,7 +75,6 @@ b ::= "true" | "false" | a0 "<" a1 | a0 ">" a1
 Commands
 c ::= "if" b "then" c0 "else" c1 "fi" | "do" c "while" b "od" | "seq" c0 ";" c1 "qes" | "skip"
 ```
-
 Most notably, the grammar was extended to encompass boolean expressions and commands, increasing the expressive power of the language beyond that of a simple calculator. Commands were also given unique initial and final terminal symbols to reduce parsing errors in nested expressions. The introduction of new syntactic sets (i.e. boolean expressions and commands) required wrapper data types to allow the parser to handle combinations of different expression types or commands.
 
 The addition of commands to the grammar required some modifications to the lexing functions to be able to capture commands evaluated repeatedly in do-while loops and in sequence. For this purpose functions were introduced to capture a string of input until a particular character or keyword is encountered, and to then parse these strings according to the loop or sequence status.
@@ -63,7 +82,46 @@ The addition of commands to the grammar required some modifications to the lexin
 ### Challenges
 The initial challenge in this project was in fully comprehending the level of recursion required to implement the basic data structures and parsing functions. In addition to the main memoization matrix, which is implemented through a pair mutually recursive data structures, the main parsing function itself is doubly recursive, assigning variables that refer to itself, and to later iterations of the parsing results. These are described in detail below.
 
-Another challenge was updating the example code to work with contemporary GHC Haskell. Although only some twenty years have passed since the publication of Ford's paper and thesis[1,3], significant alterations to the source code were necessary to make the examples functional.
+Another challenge was updating the example code to work with contemporary GHC Haskell. Although only some twenty years have passed since the publication of Ford's paper and thesis[1,3], significant alterations to the source code were necessary to make the examples functional. I encountered GHC standard changes such as the 2014 Functor-Applicative-Monad Proposal and the 2016 MonadFail Proposal, among others.
+
+The last hurdle was adapting the parser beyond the limitation of arithmetic expressions. While extending it to boolean expressions was without issue, adding commands required several new accessory parsing functions and some creative solutions to introduce control structures for if-then-else commands and do-while loops, without leaving the parsing results matrix. In these cases, my solution was to use the unlimited lookahead capability of the parser to scan for the strings of interest between terminal symbols and handle them accordingly.
+
+For example, in the "if-then-else" command, if the "if" expression evaluates to true, the "else" command is executed and the parser scans the following string until the terminal "fi" is encountered to exit the parser successfully. If the "if" expression is false, then all characters until "else" are scanned and ignored, and the following command is parsed and evaluated.
+```
+pIfThenElse :: Derivs -> Result ()
+Parser pIfThenElse =
+   do keyword "if"
+      b <- boolExp
+      keyword "then"
+      -- Case 1: boolean is true
+      when b $ do cif <- command
+                  keyword "else"
+                  skipUntil "fi"
+                  return cif
+      -- Case 2: boolean is false
+      unless b $ do skipUntil "else"
+                    cel <- command
+                    keyword "fi"
+                    return cel
+   <|>
+   do Parser pWhileDo
+```
+
+In the case of "do-while" loops, the strings corresponding to the "do" and "while" keywords are scanned and passed into a function that parses the strings and evaluates them accordingly until the "while" string returns a false value. This is likely not the most efficient method, since it will repeatedly parsing two strings, which will each create a parsing results matrix.
+
+```
+pWhileDo :: Derivs -> Result ()
+Parser pWhileDo =
+   do keyword "do"
+      s_do <- collectUntil "while"
+      b_while <- collectUntil "od"
+      traceM $ "Do: " ++ s_do ++ ", While: " ++ b_while ++ "."
+      evalWhile s_do b_while
+      return ()
+   <|>
+   do Parser pSequence
+```
+
 
 ## Components of the Code
 The key data structures of the parser are found in \/src\/Core.hs
@@ -126,14 +184,13 @@ My planned implementation schedule will divide the month of July as follows:
 * Week 3: Introduce test suite and performance comparison.
 * Week 4: Summarize results, package source code and report.
 
+
+
 ### Evaluation of Project Status
 ```
 what works well,  what works partially,
       and and what is not implemented at all.
 ```
-
-
-
 
 
 # Using the Packrat Parser
