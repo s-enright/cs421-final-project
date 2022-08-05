@@ -69,32 +69,34 @@ instance MonadFail Parser where
          post d NoParse = p2 d
          post d r = r
 
-{-
-instance Alternative Parser where
-   empty = NoParse
-   (Parser l) <|> NoParse = (\d -> Parsed l Derivs)
--}
 
--- Helper functions for lexical analysis
+-- Functions for lexical analysis
+---------------------------------
+
+-- List of allowed keywords
 keywordList :: [String]
 keywordList = ["true", "false", "if", "then", "else", "fi",
                "while", "do", "od", "seq", "qes", ";", "skip"]
 
+-- List of allowed operators and symbols
 symbolList :: String
 symbolList = "+-*/%()<>;"
 
--- Generates a list of allowed characters in a keyword
+-- Generate a list of allowed characters in a keyword
 uniqueChars :: [Char]
 uniqueChars = aux keywordList []
   where aux []     acc = acc
         aux (l:ls) acc = aux ls (nub (l ++ acc))
 
+-- Parse a single character of a string
 anyChar :: Parser Char
 anyChar = Parser dvChar
 
+-- Check if any of the parsed characters belong to the given container
 oneOf :: Foldable t => t Char -> Parser Char
 oneOf chs = sat anyChar (`elem` chs)
 
+-- Check if provided parser satisfies the input predicate
 sat :: Parser v -> (v -> Bool) -> Parser v
 sat (Parser p) predicate = Parser parse
       where parse dvs = check dvs (p dvs)
@@ -103,16 +105,15 @@ sat (Parser p) predicate = Parser parse
                else NoParse
             check dvs none = none
 
+-- Check if the given string is a keyword
 keyword :: String -> Parser String
 keyword s =
-   do --traceM $ "  looking for keyword: " ++ s
-      Parser dvWhitespace
+   do Parser dvWhitespace
       s' <- Parser dvKeyword
       if s' == s then return s
                  else fail []
 
--- Consume characters until the
--- desired keyword is encountered
+-- Consume characters until the desired keyword is encountered
 skipUntil :: String -> Parser String
 skipUntil s =
    do keyword s
@@ -132,16 +133,18 @@ collectUntil s = aux s ""
       do c <- Parser dvChar
          aux kw (acc ++ [c])
 
+-- Check if the next non-whitespace character matches the input character
 symbol :: Char -> Parser Char
 symbol c =
-   do --traceM $ "  looking for symbol: " ++ [c]
-      Parser dvWhitespace
+   do Parser dvWhitespace
       c' <- Parser dvSymbol
       if c' == c then return c
                  else fail []
 
+-- Check if the given character is a whitespace character
 space :: Parser Char
 space = sat anyChar isSpace
 
+-- Check if the given character is an allowed numerical digit character
 digit :: Parser Char
 digit = sat anyChar isDigit

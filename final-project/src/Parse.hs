@@ -43,12 +43,31 @@ parse s = d where
                []     -> NoParse
 
 
+-- A parser of commands
 command :: Parser ()
-command = Parser pIfThenElse
+command = Parser pCommand
+
+-- A parser of boolean expressions
 boolExp :: Parser Bool
-boolExp = Parser pBoolVal
+boolExp = Parser pBoolExp
+
+-- A parser of arithmetic expressions
 arithExp :: Parser Int
-arithExp = Parser pAdditive
+arithExp = Parser pArithExp
+
+-- Entry into parsing functions for each data type
+
+-- Parse an arithmetic expression
+pArithExp :: Derivs -> Result Int
+pArithExp = pAdditive
+
+-- Parse a Boolean expression
+pBoolExp :: Derivs -> Result Bool
+pBoolExp = pBoolVal
+
+-- Parse a command
+pCommand :: Derivs -> Result ()
+pCommand = pIfThenElse
 
 
 -- Main entry into packrat parser.
@@ -64,6 +83,9 @@ Parser pValidInput =
    do a <- arithExp
       return (IntExp a)
 
+
+-- Commands
+-------------------------
 
 -- Parse an if-then-else statement. If the "if" expression
 -- evaluates to true, the "then" statement is executed.
@@ -116,7 +138,10 @@ Parser pSkip =
    do keyword "skip"
       return ()
 
--- Boolean
+
+-- Boolean Expressions
+-------------------------
+
 -- Parse an explicitly given boolean value
 pBoolVal :: Derivs -> Result Bool
 Parser pBoolVal =
@@ -141,7 +166,9 @@ Parser pRelExpr =
       vr <- arithExp
       return (vl < vr)
 
--- Arithmetic
+-- Arithmetic Expressions
+-------------------------
+
 -- Parse an expression with addition or subtraction
 pAdditive :: Derivs -> Result Int
 Parser pAdditive =
@@ -220,32 +247,28 @@ Parser pSingleDigit =
    do digitToInt <$> digit
 
 
--- ^^^ End parsing functions for non-terminals
+-- Functions to assist parsing, but not explicitly part of the grammar
+-----------------------------------------------------------------------
 
--- vvv Begin non-terminal parsing functions
-
--- From Ford paper
 -- Parse an operator followed by optional whitespace
-
 pKeyword :: Derivs -> Result String
 Parser pKeyword =
-   do --traceM "Starting Keyword"
-      s <- Parser dvMultipleChars
-      --traceM $ "s: " ++ s ++ ". end"
+   do s <- Parser dvMultipleChars
       if s `elem` keywordList then return s
       else fail []
 
+-- Parse a character and if it belongs to the list of allowed keyword characters,
+-- recursively add it to the result of this function. This will build a possible
+-- keyword one character at a time.
 pMultipleChars :: Derivs -> Result [Char]
 Parser pMultipleChars =
    do c <- oneOf uniqueChars
-      --traceM $ "char: " ++ [c]
       s <- Parser dvMultipleChars
-      --traceM (c:s)
       return (c:s)
    <|>
    do return []
 
--- Check for allowed character symbols
+-- Parse an allowed character symbols
 pSymbol :: Derivs -> Result Char
 Parser pSymbol =
    do Parser dvWhitespace
@@ -262,6 +285,7 @@ Parser pWhitespace =
    <|>
    do return ()
 
+-- Continuously parse a command string until a boolean expression string and evaluates false
 evalWhile :: String -> String -> Parser ()
 evalWhile doStr whileStr =
    do case pValidInput (parse doStr) of

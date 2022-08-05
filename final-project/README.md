@@ -45,7 +45,7 @@ This language was extended to closely approximate the IMP language[2], with a fe
 In Backus-Nauer form, this grammar is described as:
 ```
 Arithmetic Expressions
-a ::= a0 "+" a1 | a0 "-" a1 | a0 "*" a1 | a0 "/" a1 | a0 "mod" a1 | i
+a ::= a0 "+" a1 | a0 "-" a1 | a0 "*" a1 | a0 "/" a1 | a0 "%" a1 | i
 i ::= "-" d | d
 d ::= "0" | ... | "9"
 
