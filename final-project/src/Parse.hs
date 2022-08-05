@@ -7,11 +7,24 @@ import Debug.Trace ( traceM )
 import Data.Char (digitToInt)
 
 
--- Main parse function
--- Create a result matrix for an input string
--- The double recursion in this function allows the result
--- matrix to lazily be evaluated while advancing through
--- the input string one character at a time.
+-- The main parsing function. This is the only entry into the key
+-- data structure of the packrat parser by way of an input string.
+-- It is the most important parsing function of the parser, as it
+-- constructs the parsing result matrix and ties together the many
+-- parsing functions of the grammar.
+--
+-- It takes an input string and returns a single column of a parsing
+-- result matrix, a Derivs instance, and also recursively iterates
+-- over the string one character at a time, creating and linking to 
+-- Derivs instances, until the end of the string is reached and the
+-- matrix is terminated.
+-- 
+-- The Derivs constructor is used to specify the many parsing
+-- functions that will be used in the language. Each function has
+-- one parameter, which references the encompassing Derivs instance,
+-- producing the results that will be passed to subsequent parsing
+-- functions. Since Haskell is lazily evaluated, many parsing
+-- functions will not actually be referenced in a given column.
 parse :: String -> Derivs
 parse s = d where
    d      = Derivs skip seq ite wd
@@ -90,6 +103,7 @@ Parser pValidInput =
 -- Parse an if-then-else statement. If the "if" expression
 -- evaluates to true, the "then" statement is executed.
 -- Otherwise, the "else" statement is executed.
+-- e.g. "if [b] then [c0] else [c1] fi"
 pIfThenElse :: Derivs -> Result ()
 Parser pIfThenElse =
    do keyword "if"
@@ -109,6 +123,10 @@ Parser pIfThenElse =
    do Parser pWhileDo
 
 -- Parse a do-while loop statement
+-- e.g. "do [c] while [b] od"
+-- Since the "do" command and "while" expression are evaluated
+-- repeatedly, the strings representing each are collected and
+-- then parsed until the "while" expression evaluates false.
 pWhileDo :: Derivs -> Result ()
 Parser pWhileDo =
    do keyword "do"
@@ -121,6 +139,7 @@ Parser pWhileDo =
    do Parser pSequence
 
 -- Parse a sequence of commands
+-- e.g. "seq [c0] ; [c1] qes"
 pSequence :: Derivs -> Result ()
 Parser pSequence =
    do keyword "seq"
@@ -133,6 +152,7 @@ Parser pSequence =
    do Parser pSkip
 
 -- Parse an explicitly given "skip" statement
+-- e.g. "skip"
 pSkip :: Derivs -> Result ()
 Parser pSkip =
    do keyword "skip"
@@ -143,6 +163,8 @@ Parser pSkip =
 -------------------------
 
 -- Parse an explicitly given boolean value
+-- Returns a boolean representing the value
+-- e.g. "true", "false"
 pBoolVal :: Derivs -> Result Bool
 Parser pBoolVal =
    do keyword "true"
@@ -153,7 +175,8 @@ Parser pBoolVal =
    <|>
    do Parser dvRelExpr
 
--- Parse a comparison of arithmetic values
+-- Parse a comparison of arithmetic values, returning a boolean
+-- e.g. "2>3" = false
 pRelExpr :: Derivs -> Result Bool
 Parser pRelExpr =
    do vl <- arithExp
@@ -166,10 +189,13 @@ Parser pRelExpr =
       vr <- arithExp
       return (vl < vr)
 
+
 -- Arithmetic Expressions
 -------------------------
 
 -- Parse an expression with addition or subtraction
+-- Both operators are right-associative.
+-- e.g. "1+2" = 3, "7-5" = 2
 pAdditive :: Derivs -> Result Int
 Parser pAdditive =
    do vleft <- Parser dvMultitive
@@ -186,6 +212,8 @@ Parser pAdditive =
 
 -- Parse an expression that uses multiplication,
 -- division, or a modulo operation
+-- All three operators are right-associative.
+-- e.g. "1*2" = 2, "12/3" = 4, "19%13" = 6
 pMultitive :: Derivs -> Result Int
 Parser pMultitive =
    do vleft <- Parser dvPrimary
@@ -208,6 +236,9 @@ Parser pMultitive =
    do Parser dvPrimary
 
 -- Parse an arithmetic expression within parentheses
+-- The parser within the parentheses is the highest-precedence
+-- parser, so this expression is also of high precedence.
+-- e.g. "(2+3)" = 5
 pPrimary :: Derivs -> Result Int
 Parser pPrimary =
    do symbol '('
@@ -217,7 +248,8 @@ Parser pPrimary =
    <|>
    do Parser dvInteger
 
--- Parse an integer, which may be negative
+-- Parse an possibly-negative, possibly multiple-digit integer
+-- e.g. "1" = 1, "-2" = -2, "39" = 39
 pInteger :: Derivs -> Result Int
 Parser pInteger =
    do Parser dvWhitespace

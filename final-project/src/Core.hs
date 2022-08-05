@@ -6,13 +6,20 @@ import Data.Char ( isSpace, isDigit, digitToInt )
 import Data.List (nub)
 import Data.Bool (bool)
 
+-- The Derivs type represents a column of the parsing results
+-- matrix. Each field corresponds to a non-terminal, with a type
+-- that is the result of parsing the symbol.
+-- 
+-- There is a parsing function corresponding to each field
+-- accessor. For example, for the field with accessor dvBoolVal,
+-- there is parsing function pBoolVal.
 data Derivs = Derivs {
                -- Commands
-               dvSkip           :: Result (),
                --dvAssign         :: Result (),
-               dvSequence       :: Result (),
                dvIfThenElse     :: Result (),
                dvWhileDo        :: Result (),
+               dvSequence       :: Result (),
+               dvSkip           :: Result (),
                -- Boolean
                dvBoolVal        :: Result Bool,
                dvRelExpr        :: Result Bool,
@@ -23,34 +30,42 @@ data Derivs = Derivs {
                dvInteger        :: Result Int,
                dvMultipleDigits :: Result (Int, Int),
                dvSingleDigit    :: Result Int,
-
                -- Lexical tokens
                dvKeyword        :: Result String,
                dvMultipleChars  :: Result [Char],
                dvSymbol         :: Result Char,
                dvWhitespace     :: Result (),
-
                -- Raw input
                dvChar :: Result Char
                }
 
+-- The result of parsing a Derivs instance. In the case of a successful
+-- Parse, the Parsed constructor takes a value and a Derivs instance
+-- that provides a link to the next column in the parsing matrix. If a
+-- parse fails, NoParse is used.
 data Result v = Parsed v Derivs
               | NoParse
 
+-- The three data types of the language
 data Types = Command
            | BoolExp Bool
            | IntExp Int
 
+-- A Parser is constructed with a parsing function that accepts a
+-- Derivs instance, representing a column of the parsing matrix, and
+-- outputs a Result, indicating the result of parsing the input column.
 newtype Parser v = Parser (Derivs -> Result v)
 
+-- Parser will only be used in monadic context, so fmap is equivalent to liftM
 instance Functor Parser where
   fmap = liftM
 
+-- Default Applicative function implementations suffice for Parser
 instance Applicative Parser where
   pure  = return
   (<*>) = ap
 
--- from Ford paper
+-- From Ford listing
 instance Monad Parser where
    (Parser p) >>= f = Parser pre
       where pre d = post (p d)
@@ -59,10 +74,15 @@ instance Monad Parser where
             post NoParse = NoParse
    return x = Parser (Parsed x)
 
+-- MonadFail forcibly exiting parse in rare circumstances
 instance MonadFail Parser where
    fail _ = Parser (const NoParse)
 
--- Alternative function
+-- Alternative function for Parser
+-- If first parser succeeds, use its result
+-- If first parser fails (i.e. evaluates to NoParse), try second parser
+-- If both succeed, use first result
+-- From Ford listing
 (<|>) :: Parser v -> Parser v -> Parser v
 (Parser p1) <|> (Parser p2) = Parser pre
    where pre d = post d (p1 d)

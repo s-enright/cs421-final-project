@@ -1,11 +1,12 @@
 module Tests where
 
-import Core ( Result(Parsed) )
+import Core ( Derivs, Result(Parsed) )
 import Parse ( parse, pArithExp )
 
 
 -- Evaluate an expression and return the unpackaged result,
 -- ignoring any unparsed remainder.           
+runParser :: (Derivs -> Result v) -> String -> v
 runParser p s = case p (parse s) of
                      Parsed v rem -> v
                      _ -> error "Parse error"
@@ -93,6 +94,7 @@ inputArith = [("0+1+2+3+4+5+6", 21)
              ]
 
 -- Test a list of arithmetic input strings against their expected values
+testArithExp :: [(String, Int)] -> [Bool]
 testArithExp inputList = 
    let testPair (inputStr, correctAnswer) =
          runParser pArithExp inputStr == correctAnswer

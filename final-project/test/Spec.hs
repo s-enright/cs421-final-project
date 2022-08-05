@@ -6,10 +6,9 @@ import System.Exit (exitWith, ExitCode(ExitSuccess, ExitFailure), exitSuccess)
 import System.Timeout (timeout)
 import Control.Exception (try, evaluate, SomeException)
 
--- Main outline taken from MP3
+-- Main outline of entry point to tests taken from MP3
 main =
-   do putStrLn ""
-      putStrLn "Running Tests"
+   do putStrLn "\nRunning Tests"
       putStrLn "============="
       results <- runTests
       mapM_ (putStrLn . showTR) results
@@ -30,20 +29,26 @@ data TestStatus = Pass
                 | Timeout
                 deriving Show
 
+-- Result of a test and its name
 type TestResult = (TestStatus, String)
 
+-- Display the score and name of a test
 showTR :: TestResult -> String
 showTR (score, name) = show score ++ ": " ++ name
 
 -- Display percent successful
+scoreResult :: [(TestStatus, b)] -> (Int, Int, Int)
 scoreResult tests = let passed = length [t | t@(Pass, _) <- tests]
                 in  (passed, length tests, (passed * 100) `div` length tests)
 
+-- Execute all tests and return a list of TestResults instances,
+-- proving the result of the test and its name
 runTests :: IO [TestResult]
 runTests = let handleTest (test, name) = do score <- runTest test
                                             return (score, name)
            in  mapM handleTest allTests
 
+-- Execute an individual test, returning its result status
 runTest :: [Bool] -> IO TestStatus
 runTest tests =
    let test  = case and tests of

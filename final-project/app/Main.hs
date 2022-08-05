@@ -32,4 +32,4 @@ repl = do input <- prompt "Packrat> " >> getLine
 main :: IO ()
 main = do putStrLn "Staring Packrat REPL..."
           repl
-          putStrLn "...Leaving Pack REPL"
+          putStrLn "...Leaving Packrat REPL"
