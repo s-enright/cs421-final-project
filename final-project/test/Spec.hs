@@ -14,8 +14,8 @@ main =
       mapM_ (putStrLn . showTR) results
       putStrLn ""
       let (scoreNum, testNum, scorePct) = scoreResult results
-      putStrLn $ show scoreNum ++ "/" ++ show testNum ++ " tests passed."  
-      putStrLn $ "(" ++ show scorePct ++ "% success rate)\n"
+      putStrLn $ show scoreNum ++ " of " ++ show testNum ++ " tests passed "  
+                 ++ "(" ++ show scorePct ++ "% success rate)\n"
       if scorePct >= 100
          then do putStrLn "All tests passed."
                  exitSuccess

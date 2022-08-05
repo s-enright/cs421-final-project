@@ -3,7 +3,6 @@ module Parse where
 --import Control.Applicative ( Alternative((<|>), empty) )
 import Core
 import Control.Monad (when, unless)
-import Debug.Trace ( traceM )
 import Data.Char (digitToInt)
 
 
@@ -132,7 +131,6 @@ Parser pWhileDo =
    do keyword "do"
       s_do <- collectUntil "while"
       b_while <- collectUntil "od"
-      traceM $ "Do: " ++ s_do ++ ", While: " ++ b_while ++ "."
       evalWhile s_do b_while
       return ()
    <|>
