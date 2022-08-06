@@ -13,7 +13,7 @@ Packrat parsing is a method of implementing parsers that run in linear time with
 
 These benefits come at the expense of memory consumption, which is significantly higher in packrat parsers than typical parsers for LL(n) and LR(n) grammars. This limitation prevented this style of parsing, first described in the 1970s, from gaining prominence until the early 2000s, when hardware and optimizing compilers made these downsides an acceptable trade-off for certain applications.
 
-Ford describes a packrat parser implementation through a grammar for a trivial language describing basic arithmetic expressions. I have extended this grammar to express a variant of the IMP language[2], following Ford's outline. This language adds boolean expressions and command statements to demonstrate the application of packrat parsing to different data types and control structures.
+Ford describes a packrat parser implementation through a grammar for a trivial language describing basic arithmetic expressions. I have extended this grammar to express a variant of the IMP language[2], following Ford's outline. This language adds Boolean expressions and command statements to demonstrate the application of packrat parsing to different data types and control structures.
 
 My implementation uses monadic combinators for clarity and to reduce the amount of code.
 
@@ -70,7 +70,7 @@ b ::= "true" | "false" | a0 "<" a1 | a0 ">" a1
 Commands
 c ::= "if" b "then" c0 "else" c1 "fi" | "do" c "while" b "od" | "seq" c0 ";" c1 "qes" | "skip"
 ```
-Most notably, the grammar was extended to encompass boolean expressions and commands, increasing the expressive power of the language beyond that of a simple calculator. Commands were also given unique initial and final terminal symbols to reduce parsing errors in nested expressions. The introduction of new syntactic sets (i.e. boolean expressions and commands) required wrapper data types to allow the parser to handle combinations of different expression types or commands.
+Most notably, the grammar was extended to encompass Boolean expressions and commands, increasing the expressive power of the language beyond that of a simple calculator. Commands were also given unique initial and final terminal symbols to reduce parsing errors in nested expressions. The introduction of new syntactic sets (i.e., Boolean expressions and commands) required wrapper data types to allow the parser to handle combinations of different expression types or commands.
 
 The addition of commands to the grammar required some modifications to the lexing functions to be able to capture commands evaluated repeatedly in do-while loops and in sequence. For this purpose functions were introduced to capture a string of input until a particular character or keyword is encountered, and to then parse these strings according to the loop or sequence status.
 
@@ -233,7 +233,7 @@ The initial challenge in this project was in fully comprehending the level of re
 
 Another challenge was updating the example code to work with contemporary GHC Haskell. Although only some twenty years have passed since the publication of Ford's paper and thesis[1,3], significant alterations to the source code were necessary to make the examples functional. I encountered GHC standard changes such as the 2014 Functor-Applicative-Monad Proposal and the 2016 MonadFail Proposal, among others.
 
-The last hurdle was adapting the parser beyond the limitation of arithmetic expressions. While extending it to boolean expressions was without issue, adding commands required several new accessory parsing functions and some creative solutions to introduce control structures for if-then-else commands and do-while loops, without leaving the parsing results matrix. In these cases, my solution was to use the unlimited lookahead capability of the parser to scan for the strings of interest between terminal symbols and handle them accordingly.
+The last hurdle was adapting the parser beyond the limitation of arithmetic expressions. While extending it to Boolean expressions was without issue, adding commands required several new accessory parsing functions and some creative solutions to introduce control structures for if-then-else commands and do-while loops, without leaving the parsing results matrix. In these cases, my solution was to use the unlimited lookahead capability of the parser to scan for the strings of interest between terminal symbols and handle them accordingly.
 
 For example, in the if-then-else command, if the "if" expression evaluates to true, the "else" command is executed and the parser scans the following string until the terminal "fi" is encountered to exit the parser successfully. If the "if" expression is false, then all characters until "else" are scanned and ignored, and the following command is parsed and evaluated.
 
@@ -314,7 +314,7 @@ Packrat> exit
 # Tests
 The test suite provided through the `stack test` command provides input strings to the parser and compares the output of the parser with the expected value. Through this method, the tests require the use of the packrat parsing algorithm to process input.
 
-In each test, a string containing a input expression or string is passed into a parser and evaluated, and its output is compared with the desired result. Specialied parsers are used to enter the parsing matrix at different points corresponding to their datatypes, i.e. Int, Bool and () for arithmetic expressions, Boolean expressions and commands, respectively. A top-level parser is also used to parse strings of any type. In the case of commands, if successfully parsed and evaluated, the return value is (), so the parser is effectively testing whether the command was executed without issue.
+In each test, a string containing a input expression or string is passed into a parser and evaluated, and its output is compared with the desired result. Specialized parsers are used to enter the parsing matrix at different points corresponding to their datatypes, i.e. Int, Bool and () for arithmetic expressions, Boolean expressions and commands, respectively. A top-level parser is also used to parse strings of any type. In the case of commands, if successfully parsed and evaluated, the return value is (), so the parser is effectively testing whether the command was executed without issue.
 
 The tests include:
 
