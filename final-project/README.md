@@ -101,7 +101,7 @@ data Derivs = Derivs {
                dvInteger        :: Result Int,
                dvMultipleDigits :: Result (Int, Int),
                dvSingleDigit    :: Result Int,
-               -- Lexical tokens
+               -- Lexical analysis
                dvKeyword        :: Result String,
                dvMultipleChars  :: Result [Char],
                dvSymbol         :: Result Char,
@@ -188,6 +188,13 @@ Parser pRelExpr =
 ```
 
 ### Limitations
+My implementation of a packrat parser serves to demonstrate and extend Ford's concept, but the implemented language has shortcomings that limit its practicality.
+
+Most importantly, it is a stateless language. This significantly limits its use for general purpose programming. For example, the do-while loop of the language I implemented is not of much use without the conditional Boolean expression being dependent on a variable. Ford describes[1]  this limitation and offers[3] a solution, with words of caution, since the introduction of state would require the re-calculation of the entire parsing results matrix at every state change, which potentially eliminates the performance benefits of this method of parser writing.
+
+Another limitation is error handling. An unrecognized string raises and error which causes the REPL and program to terminate.
+
+There are also some limitations in the grammar chosen. It is susceptible to left recursion. A simple solution is to rewrite the grammar, adding suffix non-terminals, as covered in this course. This was omitted to keep the grammar more concise and readable for debugging. The grammar also does not support nested expressions or commands, e.g. `do do skip while false od while false od`.
 
 
 ## Status of the Project
@@ -208,7 +215,9 @@ My planned implementation schedule will divide the month of July as follows:
 
 
 ### Successfully Implemented Features
+A packrat parser was successfully implemented using monadic combinators, and was extended to handle grammar for a simple programming language with control structures and multiple data types, including arithmetic expressions, Boolean expressions and commands. The lookahead and backtracking capabilities were extended to skip ahead until desired keywords are found, or to collect strings in between keywords.
 
+A testing suite was designed to evaluate strings representing all possible input types, and report of the outcome.
 
 ### Challenges
 The initial challenge in this project was in fully comprehending the level of recursion required to implement the basic data structures and parsing functions. In addition to the main memoization matrix, which is implemented through a pair mutually recursive data structures, the main parsing function itself is doubly recursive, assigning variables that refer to itself, and to later iterations of the parsing results. These are described in detail below.
@@ -217,7 +226,7 @@ Another challenge was updating the example code to work with contemporary GHC Ha
 
 The last hurdle was adapting the parser beyond the limitation of arithmetic expressions. While extending it to boolean expressions was without issue, adding commands required several new accessory parsing functions and some creative solutions to introduce control structures for if-then-else commands and do-while loops, without leaving the parsing results matrix. In these cases, my solution was to use the unlimited lookahead capability of the parser to scan for the strings of interest between terminal symbols and handle them accordingly.
 
-For example, in the "if-then-else" command, if the "if" expression evaluates to true, the "else" command is executed and the parser scans the following string until the terminal "fi" is encountered to exit the parser successfully. If the "if" expression is false, then all characters until "else" are scanned and ignored, and the following command is parsed and evaluated.
+For example, in the if-then-else command, if the "if" expression evaluates to true, the "else" command is executed and the parser scans the following string until the terminal "fi" is encountered to exit the parser successfully. If the "if" expression is false, then all characters until "else" are scanned and ignored, and the following command is parsed and evaluated.
 
 ```
 pIfThenElse :: Derivs -> Result ()
@@ -253,7 +262,10 @@ Parser pWhileDo =
    do Parser pSequence
 ```
 
-### Features That Were Not Implemented
+### Features Not Implemented
+In my proposal, I planned to also implement a recursive-descent parser and compare its performance against my packrat parser. I chose to omit the recursive-descent parser to focus more time on extending and documenting the packrat parser. After having implemented a packrat parser, a recursive descent parser could be made by keeping the parsing functions of the packrat parser, but modifying the underlying data structures. `Derivs` would be eliminated along with the mutual recursion between it and `Result`. A more simple `parse` function would be implemented as well, as the lazily-evaluated and recursive structure of the function would no longer be necessary. The overall effect would be to backtrack when failing a parse, rather than lazily traverse through the parsing results matrix.
+
+In the absence of a recursive descent parser with which to compare, I also chose to omit the performance analysis. I identified the GHC `-prof` option and the [hp2any](https://wiki.haskell.org/Hp2any) libraries as capable tools for memory profiling.
 
 
 # Using the Packrat Parser
@@ -307,10 +319,10 @@ The tests include:
 # References
 1. Bryan Ford. 2002. Packrat parsing: simple, powerful, lazy, linear time, functional pearl. *SIGPLAN Not.* 37, 9 (September 2002), 36–47. https://doi.org/10.1145/583852.581483
 
-   [Packrat parsing: simple, powerful, lazy, linear time, functional pearl](/final-project/doc/Bryan_Ford_Packrat_Parsing_Paper.pdf)
+   Available locally: [Packrat parsing: simple, powerful, lazy, linear time, functional pearl](/final-project/doc/Bryan_Ford_Packrat_Parsing_Paper.pdf)
 
 2. Glynn Winskel. 2001. *The Formal Semantics of Programming Languages: An Introduction*. 12-24. MIT Press.
 
 3. Bryan Ford. 2002. Packet parsing: a practical linear-time algorithm with backtracking. Master's Thesis. MIT, Cambridge, MA. Retrieved August 2, 2022 from https://dspace.mit.edu/handle/1721.1/87310
 
-   [Packet parsing: a practical linear-time algorithm with backtracking](/final-project/doc/Bryan_Ford_Master's_Thesis-MIT.pdf)
+   Available locally:  [Packet parsing: a practical linear-time algorithm with backtracking](/final-project/doc/Bryan_Ford_Master's_Thesis-MIT.pdf)
