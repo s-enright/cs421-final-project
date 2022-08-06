@@ -1,7 +1,6 @@
 module Core where
 
 import Control.Monad (liftM, ap)
-import Debug.Trace ( traceM )
 import Data.Char ( isSpace, isDigit, digitToInt )
 import Data.List (nub)
 import Data.Bool (bool)
@@ -18,7 +17,6 @@ data Derivs = Derivs {
                -- Top level
                dvInputString    :: Result Types,
                -- Commands
-               --dvAssign         :: Result (),
                dvIfThenElse     :: Result (),
                dvWhileDo        :: Result (),
                dvSequence       :: Result (),
