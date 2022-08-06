@@ -31,7 +31,7 @@ data Derivs = Derivs {
                dvInteger        :: Result Int,
                dvMultipleDigits :: Result (Int, Int),
                dvSingleDigit    :: Result Int,
-               -- Lexical tokens
+               -- Lexical analysis
                dvKeyword        :: Result String,
                dvMultipleChars  :: Result [Char],
                dvSymbol         :: Result Char,
