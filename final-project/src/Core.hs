@@ -82,7 +82,7 @@ instance Monad Parser where
 instance MonadFail Parser where
    fail _ = Parser (const NoParse)
 
--- Alternative function for Parser
+-- Choice operator for Parser
 -- If first parser succeeds, use its result
 -- If first parser fails (i.e. evaluates to NoParse), try second parser
 -- If both succeed, use first result

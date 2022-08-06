@@ -120,6 +120,15 @@ data Result v = Parsed v Derivs
 
 These two data structures, Result and Derivs, are mutually recursive, thereby providing a link between columns of the parsing matrix. A parsing function that succeeds yields a Result, which itself contains a Derivs instance linking to the next column. This continues until either a parsing failure occurs or the input string is completely consumed.
 
+The `Parser` data type is constructed with a parsing function that returns a Result and a link to the next Derivs.
+
+```
+newtype Parser v = Parser (Derivs -> Result v)
+```
+
+Its implementation as a monad follows the approach in Ford's listing, allowing for automatic handling of parsing function failures and convenient "do" notation. The default definitions of the pure, ap and fmap functions are used. The choice operator (<|>) is also provided to allow alternate parsing decisions and for grammars to be expressed succinctly. This results in parsing functions that closely resemble the grammar as written.
+
+The parser is made an instance of the MonadFail class to forcibly terminate parsing functions. This follows the implementation in Ford's listing.
 
 
 ### Parsers
