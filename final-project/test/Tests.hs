@@ -1,29 +1,30 @@
 module Tests where
 
-import Core ( Derivs, Result(Parsed) )
-import Parse ( parse, pArithExp, pBoolExp, pCommand )
+import Core ( Derivs, Result(Parsed), Types(Command, BoolExp, IntExp))
+import Parse ( parse, pArithExp, pBoolExp, pCommand, pInputString)
 
-
--- Evaluate an expression and return the unpackaged result,
--- ignoring any unparsed remainder.           
-runParser :: (Derivs -> Result v) -> String -> v
-runParser p s = case p (parse s) of
-                     Parsed v rem -> v
-                     _ -> error "Parse error"
 
 -- List of all tests and their titles
 allTests :: [([Bool], String)]
-allTests = [(testParserResult pArithExp inputInt, "Arithmetic expressions: Signed integers")
-           ,(testParserResult pArithExp inputAddSub, "Arithmetic expressions: Addition and subtraction")
-           ,(testParserResult pArithExp inputMult, "Arithmetic expressions: Multiplication")
-           ,(testParserResult pArithExp inputDiv, "Arithmetic expressions: Division")
-           ,(testParserResult pArithExp inputMod, "Arithmetic expressions: Modulo")
-           ,(testParserResult pArithExp inputArith, "Arithmetic expressions: Combined operators")
-           ,(testParserResult pBoolExp inputBool, "Boolean expressions: Boolean expressions and arithmetic comparison")
-           ,(testParserResult pCommand inputCommand, "Commands: Successful execution of commands")
-           ,(testParserResult pArithExp inputArithWhitespace, "Whitespace: Arithmetic expressions")
-           ,(testParserResult pBoolExp inputBoolWhitespace, "Whitespace: Boolean expressions")
-           ,(testParserResult pCommand inputCommandWhitespace, "Whitespace: Commands")
+allTests = [(testParserResult pArithExp inputInt,               "Arithmetic expressions: Signed integers")
+           ,(testParserResult pArithExp inputAddSub,            "Arithmetic expressions: Addition and subtraction")
+           ,(testParserResult pArithExp inputMult,              "Arithmetic expressions: Multiplication")
+           ,(testParserResult pArithExp inputDiv,               "Arithmetic expressions: Division")
+           ,(testParserResult pArithExp inputMod,               "Arithmetic expressions: Modulo")
+           ,(testParserResult pArithExp inputArith,             "Arithmetic expressions: Combined operators")
+           ,(testParserResult pBoolExp inputBool,               "Boolean expressions: Boolean expressions and arithmetic comparison")
+           ,(testParserResult pCommand inputCommand,            "Commands: Successful execution of commands")
+           ,(testParserResult pArithExp inputArithWhitespace,   "Whitespace: Arithmetic expressions")
+           ,(testParserResult pBoolExp inputBoolWhitespace,     "Whitespace: Boolean expressions")
+           ,(testParserResult pCommand inputCommandWhitespace,  "Whitespace: Commands")
+           ,(testGeneralArith $ inputInt ++ inputAddSub
+                                ++ inputMult ++ inputDiv
+                                ++ inputMod ++ inputArith
+                                ++ inputArithWhitespace,        "General purpose parser: All arithmetic expresions")
+           ,(testGeneralBool $ inputBool
+                               ++ inputBoolWhitespace,          "General purpose parser: All Boolean expresions")
+           ,(testGeneralCommand $ inputCommand
+                                  ++ inputCommandWhitespace,    "General purpose parser: All commands")
            ]
 
 inputInt =  [("0", 0)
@@ -175,10 +176,55 @@ inputCommandWhitespace= [("    skip", ())
                         ,("    do   seq    if   3  >  1   then   skip    else   skip   fi   ;  if   3   <   1   then    skip   else    skip   fi  qes    while  3  <  1  od   ", ())
                         ]
 
+inputTest = [("   true", True)
+            ,("true   ", True)
+            ,("false  ", False)
+            ,("    false", False)
+            ,("  34>12", True)
+            ,("34>12    ", True)
+            ,("  34>12    ", True)
+            ]
+
+
+-- Evaluate an expression and return the unpackaged result,
+-- ignoring any unparsed remainder.           
+runParser :: (Derivs -> Result v) -> String -> v
+runParser p s = case p (parse s) of
+                     Parsed v rem -> v
+                     _ -> error "Parse error"
+
 -- Test a list of input strings against their expected values by running
 -- a parser on each of them and reporting the result in a list of Booleans
 testParserResult :: Eq a => (Derivs -> Result a) -> [(String, a)] -> [Bool]
 testParserResult parser inputList = 
    let testPair (inputStr, correctAnswer) =
          runParser parser inputStr == correctAnswer
+   in map testPair inputList
+
+
+-- Test arithmetic expressions with general-purpose parsing function
+testGeneralArith :: [(String, Int)] -> [Bool]
+testGeneralArith inputList = 
+   let testPair (inputStr, correctAnswer) =
+         case pInputString (parse inputStr) of
+            (Parsed (IntExp i)  _) -> i  == correctAnswer
+            _                      ->    False
+   in map testPair inputList
+
+-- Test Boolean expressions with general-purpose parsing function
+testGeneralBool :: [(String, Bool)] -> [Bool]
+testGeneralBool inputList = 
+   let testPair (inputStr, correctAnswer) =
+         case pInputString (parse inputStr) of
+            (Parsed (BoolExp b) _) -> b  == correctAnswer
+            _                      ->    False
+   in map testPair inputList
+
+-- Test commands with general-purpose parsing function
+testGeneralCommand :: [(String, ())] -> [Bool]
+testGeneralCommand inputList = 
+   let testPair (inputStr, correctAnswer) =
+         case pInputString (parse inputStr) of
+            (Parsed Command     _) -> () == correctAnswer
+            _                      ->    False
    in map testPair inputList
